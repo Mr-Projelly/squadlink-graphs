@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SquadLink Interactive Graph</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #7289da; text-align: center; margin-bottom: 20px; }
+        #graph-container {
+            width: 100%;
+            height: 500px; /* Adjust height as needed */
+            margin: 20px 0;
+        }
+        .message { text-align: center; color: #666; margin-top: 20px; }
+        .error { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SquadLink Interactive Graph</h1>
+        <p class="message" id="status-message">Loading data and generating graph...</p>
+        <div id="graph-container"></div>
+        <p class="message">Data provided by <a href="https://zorkaa.github.io/data/playerdb.csv" target="_blank">playerdb.csv</a></p>
+    </div>
+
+    <script>
+        // --- JavaScript for fetching data and plotting ---
+        const CSV_URL = "https://zorkaa.github.io/data/playerdb.csv"; // Your CSV data source
+        const graphContainer = document.getElementById('graph-container');
+        const statusMessage = document.getElementById('status-message');
+
+        // Function to get URL parameter
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Function to parse a single date string (MM/DD/YYYY)
+        function parseDate(dateString) {
+            const parts = dateString.split('/');
+            // Date constructor expects MM/DD/YYYY or YYYY-MM-DD
+            // For MM/DD/YYYY, can do new Date(year, monthIndex, day)
+            const month = parseInt(parts[0], 10) - 1; // Month is 0-indexed
+            const day = parseInt(parts[1], 10);
+            const year = parseInt(parts[2], 10);
+            return new Date(year, month, day);
+        }
+
+
+        const requestedSquad = getUrlParameter('squad');
+        // If comparing multiple squads, 'squad' parameter will appear multiple times.
+        // Get all 'squad' parameters.
+        const urlParams = new URLSearchParams(window.location.search);
+        const requestedSquads = urlParams.getAll('squad');
+
+
+        if (!requestedSquads || requestedSquads.length === 0) {
+            statusMessage.textContent = 'Error: No squad name(s) provided in the URL. Please use the Discord bot command.';
+            graphContainer.style.display = 'none';
+        } else {
+            statusMessage.textContent = `Generating interactive graph for squad(s): ${requestedSquads.map(s => s.toUpperCase()).join(', ')}...`;
+
+            fetch(CSV_URL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(csvText => {
+                    const rows = csvText.split('\n').map(row => row.split(','));
+                    if (rows.length < 2) {
+                        throw new Error("CSV data is empty or too short.");
+                    }
+
+                    const header = rows[0];
+                    // Dates are in the header row, after the first column (Squad)
+                    const dates_str = header.slice(1);
+                    const dates = dates_str.map(d => parseDate(d.trim())); // Use the parseDate function
+
+                    let plotTraces = [];
+                    let overallMinLength = Infinity; // To ensure all traces have same x-axis length
+
+                    requestedSquads.forEach(squadName => {
+                        let squadData = null;
+                        let squad_y = [];
+
+                        for (let i = 1; i < rows.length; i++) {
+                            const row = rows[i];
+                            if (row.length > 0 && row[0].trim().toUpperCase() === squadName.toUpperCase()) {
+                                squadData = row;
+                                for (let j = 1; j < row.length; j++) {
+                                    let p_clean = row[j].trim().replace(/,/g, '').replace(/–/g, '').replace(/-/g, '');
+                                    squad_y.push(parseFloat(p_clean) || 0); // Convert to float, default to 0 if NaN
+                                }
+                                break;
+                            }
+                        }
+
+                        if (!squadData || squad_y.length === 0) {
+                            console.warn(`Squad "${squadName}" not found or no data available. Skipping.`);
+                            return; // Skip this squad
+                        }
+
+                        overallMinLength = Math.min(overallMinLength, squad_y.length);
+
+                        plotTraces.push({
+                            x: dates, // Dates are already sliced or matched later
+                            y: squad_y,
+                            mode: 'lines',
+                            name: squadName + ' Player Count'
+                        });
+                    });
+
+                    if (plotTraces.length === 0) {
+                        statusMessage.innerHTML = `<span class="error">No valid squad data found for plotting.</span>`;
+                        graphContainer.style.display = 'none';
+                        return;
+                    }
+
+                    // Adjust all traces to the overall minimum length for consistency if needed
+                    plotTraces = plotTraces.map(trace => ({
+                        ...trace,
+                        x: trace.x.slice(0, overallMinLength),
+                        y: trace.y.slice(0, overallMinLength)
+                    }));
+
+
+                    // Determine title based on number of squads
+                    const plotTitle = requestedSquads.length > 1 ? 
+                        "Squads Player Count Comparison (Interactive)" : 
+                        `${requestedSquads[0].toUpperCase()} Squad Player Count Over Time (Interactive)`;
+
+
+                    const layout = {
+                        title: plotTitle,
+                        xaxis: {
+                            title: 'Date',
+                            rangeslider: { visible: true },
+                            type: 'date'
+                        },
+                        yaxis: {
+                            title: 'Player Count'
+                        },
+                        hovermode: 'x unified'
+                    };
+
+                    Plotly.newPlot(graphContainer, plotTraces, layout, { responsive: true });
+                    statusMessage.textContent = `Graph for ${requestedSquads.map(s => s.toUpperCase()).join(', ')} is loaded.`;
+
+                })
+                .catch(error => {
+                    console.error('Error fetching or processing CSV:', error);
+                    statusMessage.innerHTML = `<span class="error">Failed to load graph: ${error.message}</span>`;
+                    graphContainer.style.display = 'none';
+                });
+        }
+    </script>
+</body>
+</html>
