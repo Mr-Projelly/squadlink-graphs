@@ -5,161 +5,301 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SquadLink Interactive Graph</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #7289da; text-align: center; margin-bottom: 20px; }
+        :root {
+            --bg-color: #f0f2f5;
+            --container-bg: #ffffff;
+            --text-color: #36454F; /* Darker charcoal */
+            --header-color: #5865F2; /* Discord blue */
+            --border-color: #e0e2e5;
+            --shadow-light: rgba(0, 0, 0, 0.05);
+            --shadow-medium: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for longer content */
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box; /* Include padding in element's total width and height */
+        }
+
+        .container {
+            max-width: 960px; /* Slightly wider container */
+            width: 100%;
+            margin: 20px auto; /* Centered with vertical margin */
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow-light);
+            border: 1px solid var(--border-color);
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h1 {
+            color: var(--header-color);
+            font-size: 2.2em;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .status-area {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background-color: #f8f9fa; /* Light background for messages */
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            font-size: 0.95em;
+        }
+
+        .message-text {
+            color: var(--text-color);
+        }
+
+        .error-text {
+            color: #dc3545; /* Bootstrap-like red for errors */
+            font-weight: 600;
+        }
+
         #graph-container {
             width: 100%;
-            height: 500px; /* Adjust height as needed */
+            height: 550px; /* Increased height for better visualization */
             margin: 20px 0;
+            background-color: #fdfdfd;
+            border-radius: 8px;
+            box-shadow: inset 0 1px 5px var(--shadow-light); /* Inner shadow for depth */
+            border: 1px solid var(--border-color);
+            overflow: hidden; /* Ensure graph stays within bounds */
         }
-        .message { text-align: center; color: #666; margin-top: 20px; }
-        .error { color: #e74c3c; font-weight: bold; }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+
+        footer a {
+            color: var(--header-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 20px;
+                margin: 10px auto;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            #graph-container {
+                height: 400px; /* Adjust height for smaller screens */
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>SquadLink Interactive Graph</h1>
-        <p class="message" id="status-message">Loading data and generating graph...</p>
+        <header>
+            <h1>SquadLink Interactive Graph</h1>
+        </header>
+        
+        <div class="status-area">
+            <p class="message-text" id="status-message">Loading data and generating graph...</p>
+        </div>
+
         <div id="graph-container"></div>
-        <p class="message">Data provided by <a href="https://zorkaa.github.io/data/playerdb.csv" target="_blank">playerdb.csv</a></p>
-    </div>
 
-    <script>
-        // --- JavaScript for fetching data and plotting ---
-        const CSV_URL = "https://zorkaa.github.io/data/playerdb.csv"; // Your CSV data source
-        const graphContainer = document.getElementById('graph-container');
-        const statusMessage = document.getElementById('status-message');
+        <footer>
+            <p>Data provided by <a href="https://zorkaa.github.io/data/playerdb.csv" target="_blank" rel="noopener noreferrer">playerdb.csv</a></p>
+            <p>&copy; 2025 SquadLink Bot. All rights reserved.</p>
+        </footer>
 
-        // Function to get URL parameter
-        function getUrlParameter(name) {
-            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-            var results = regex.exec(location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-        }
+        <script>
+            // --- JavaScript for fetching data and plotting ---
+            const CSV_URL = "https://zorkaa.github.io/data/playerdb.csv"; // Your CSV data source
+            const graphContainer = document.getElementById('graph-container');
+            const statusMessage = document.getElementById('status-message');
 
-        // Function to parse a single date string (MM/DD/YYYY)
-        function parseDate(dateString) {
-            const parts = dateString.split('/');
-            // Date constructor expects MM/DD/YYYY or YYYY-MM-DD
-            // For MM/DD/YYYY, can do new Date(year, monthIndex, day)
-            const month = parseInt(parts[0], 10) - 1; // Month is 0-indexed
-            const day = parseInt(parts[1], 10);
-            const year = parseInt(parts[2], 10);
-            return new Date(year, month, day);
-        }
+            // Function to parse a single date string (MM/DD/YYYY)
+            function parseDate(dateString) {
+                const parts = dateString.split('/');
+                const month = parseInt(parts[0], 10) - 1; // Month is 0-indexed
+                const day = parseInt(parts[1], 10);
+                const year = parseInt(parts[2], 10);
+                return new Date(year, month, day);
+            }
+
+            // Function to get all 'squad' parameters from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const requestedSquads = urlParams.getAll('squad');
 
 
-        const requestedSquad = getUrlParameter('squad');
-        // If comparing multiple squads, 'squad' parameter will appear multiple times.
-        // Get all 'squad' parameters.
-        const urlParams = new URLSearchParams(window.location.search);
-        const requestedSquads = urlParams.getAll('squad');
+            if (!requestedSquads || requestedSquads.length === 0) {
+                statusMessage.innerHTML = '<span class="error-text">Error: No squad name(s) provided in the URL. Please use the Discord bot command.</span>';
+                graphContainer.style.display = 'none';
+            } else {
+                statusMessage.textContent = `Generating interactive graph for squad(s): ${requestedSquads.map(s => s.toUpperCase()).join(', ')}...`;
 
+                fetch(CSV_URL)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then(csvText => {
+                        const rows = csvText.split('\n').map(row => row.split(','));
+                        if (rows.length < 2) {
+                            throw new Error("CSV data is empty or too short.");
+                        }
 
-        if (!requestedSquads || requestedSquads.length === 0) {
-            statusMessage.textContent = 'Error: No squad name(s) provided in the URL. Please use the Discord bot command.';
-            graphContainer.style.display = 'none';
-        } else {
-            statusMessage.textContent = `Generating interactive graph for squad(s): ${requestedSquads.map(s => s.toUpperCase()).join(', ')}...`;
+                        const header = rows[0];
+                        // Dates are in the header row, after the first column (Squad)
+                        const dates_str = header.slice(1);
+                        const dates = dates_str.map(d => parseDate(d.trim()));
 
-            fetch(CSV_URL)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.text();
-                })
-                .then(csvText => {
-                    const rows = csvText.split('\n').map(row => row.split(','));
-                    if (rows.length < 2) {
-                        throw new Error("CSV data is empty or too short.");
-                    }
+                        let plotTraces = [];
+                        let overallMinLength = Infinity; // To ensure all traces have same x-axis length
 
-                    const header = rows[0];
-                    // Dates are in the header row, after the first column (Squad)
-                    const dates_str = header.slice(1);
-                    const dates = dates_str.map(d => parseDate(d.trim())); // Use the parseDate function
+                        requestedSquads.forEach(squadName => {
+                            let squadData = null;
+                            let squad_y = [];
 
-                    let plotTraces = [];
-                    let overallMinLength = Infinity; // To ensure all traces have same x-axis length
-
-                    requestedSquads.forEach(squadName => {
-                        let squadData = null;
-                        let squad_y = [];
-
-                        for (let i = 1; i < rows.length; i++) {
-                            const row = rows[i];
-                            if (row.length > 0 && row[0].trim().toUpperCase() === squadName.toUpperCase()) {
-                                squadData = row;
-                                for (let j = 1; j < row.length; j++) {
-                                    let p_clean = row[j].trim().replace(/,/g, '').replace(/–/g, '').replace(/-/g, '');
-                                    squad_y.push(parseFloat(p_clean) || 0); // Convert to float, default to 0 if NaN
+                            for (let i = 1; i < rows.length; i++) {
+                                const row = rows[i];
+                                if (row.length > 0 && row[0].trim().toUpperCase() === squadName.toUpperCase()) {
+                                    squadData = row;
+                                    for (let j = 1; j < row.length; j++) {
+                                        let p_clean = row[j].trim().replace(/,/g, '').replace(/–/g, '').replace(/-/g, '');
+                                        squad_y.push(parseFloat(p_clean) || 0); // Convert to float, default to 0 if NaN
+                                    }
+                                    break;
                                 }
-                                break;
                             }
-                        }
 
-                        if (!squadData || squad_y.length === 0) {
-                            console.warn(`Squad "${squadName}" not found or no data available. Skipping.`);
-                            return; // Skip this squad
-                        }
+                            if (!squadData || squad_y.length === 0) {
+                                console.warn(`Squad "${squadName}" not found or no data available. Skipping.`);
+                                return; // Skip this squad
+                            }
+                            
+                            overallMinLength = Math.min(overallMinLength, squad_y.length);
 
-                        overallMinLength = Math.min(overallMinLength, squad_y.length);
-
-                        plotTraces.push({
-                            x: dates, // Dates are already sliced or matched later
-                            y: squad_y,
-                            mode: 'lines',
-                            name: squadName + ' Player Count'
+                            plotTraces.push({
+                                x: dates, // Dates are already sliced or matched later
+                                y: squad_y,
+                                mode: 'lines',
+                                name: squadName + ' Player Count'
+                            });
                         });
-                    });
 
-                    if (plotTraces.length === 0) {
-                        statusMessage.innerHTML = `<span class="error">No valid squad data found for plotting.</span>`;
+                        if (plotTraces.length === 0) {
+                            statusMessage.innerHTML = `<span class="error-text">No valid squad data found for plotting.</span>`;
+                            graphContainer.style.display = 'none';
+                            return;
+                        }
+
+                        // Adjust all traces to the overall minimum length for consistency if needed
+                        plotTraces = plotTraces.map(trace => ({
+                            ...trace,
+                            x: trace.x.slice(0, overallMinLength),
+                            y: trace.y.slice(0, overallMinLength)
+                        }));
+
+
+                        // Determine title based on number of squads
+                        const plotTitle = requestedSquads.length > 1 ? 
+                            "Squads Player Count Comparison (Interactive)" : 
+                            `${requestedSquads[0].toUpperCase()} Squad Player Count Over Time (Interactive)`;
+
+
+                        const layout = {
+                            title: {
+                                text: plotTitle,
+                                font: {
+                                    family: 'Inter, sans-serif',
+                                    size: 20,
+                                    color: '#36454F' /* Use hex color directly, not CSS var() */
+                                }
+                            },
+                            xaxis: {
+                                title: 'Date',
+                                rangeslider: { visible: true },
+                                type: 'date',
+                                rangeselector: {
+                                    buttons: [
+                                        { count: 1, label: '1m', step: 'month', stepmode: 'backward' },
+                                        { count: 6, label: '6m', step: 'month', stepmode: 'backward' },
+                                        { count: 1, label: '1y', step: 'year', stepmode: 'backward' },
+                                        { step: 'all' }
+                                    ]
+                                }
+                            },
+                            yaxis: {
+                                title: 'Player Count',
+                                fixedrange: false, /* Allows y-axis zooming */
+                                tickformat: ',.0f' /* Format y-axis as integers */
+                            },
+                            hovermode: 'x unified',
+                            margin: { l: 60, r: 20, t: 70, b: 60 }, /* Adjust margins */
+                            plot_bgcolor: '#ffffff', /* Use hex color directly, not CSS var() */
+                            paper_bgcolor: '#ffffff', /* Use hex color directly, not CSS var() */
+                            font: {
+                                family: 'Inter, sans-serif',
+                                color: '#36454F' /* Use hex color directly, not CSS var() */
+                            },
+                            legend: {
+                                orientation: "h",
+                                yanchor: "bottom",
+                                y: 1.02,
+                                xanchor: "right",
+                                x: 1
+                            }
+                        };
+
+                        Plotly.newPlot(graphContainer, plotTraces, layout, { 
+                            responsive: true,
+                            displayModeBar: true, /* Show toolbar for zoom/pan/download */
+                            modeBarButtonsToRemove: ['lasso2d', 'select2d'] /* Remove less useful buttons */
+                        });
+                        statusMessage.innerHTML = `<span class="message-text">Graph for ${requestedSquads.map(s => s.toUpperCase()).join(', ')} is loaded.</span>`;
+
+                    })
+                    .catch(error => {
+                        console.error('Error fetching or processing CSV:', error);
+                        statusMessage.innerHTML = `<span class="error-text">Failed to load graph: ${error.message}</span>`;
                         graphContainer.style.display = 'none';
-                        return;
-                    }
-
-                    // Adjust all traces to the overall minimum length for consistency if needed
-                    plotTraces = plotTraces.map(trace => ({
-                        ...trace,
-                        x: trace.x.slice(0, overallMinLength),
-                        y: trace.y.slice(0, overallMinLength)
-                    }));
-
-
-                    // Determine title based on number of squads
-                    const plotTitle = requestedSquads.length > 1 ? 
-                        "Squads Player Count Comparison (Interactive)" : 
-                        `${requestedSquads[0].toUpperCase()} Squad Player Count Over Time (Interactive)`;
-
-
-                    const layout = {
-                        title: plotTitle,
-                        xaxis: {
-                            title: 'Date',
-                            rangeslider: { visible: true },
-                            type: 'date'
-                        },
-                        yaxis: {
-                            title: 'Player Count'
-                        },
-                        hovermode: 'x unified'
-                    };
-
-                    Plotly.newPlot(graphContainer, plotTraces, layout, { responsive: true });
-                    statusMessage.textContent = `Graph for ${requestedSquads.map(s => s.toUpperCase()).join(', ')} is loaded.`;
-
-                })
-                .catch(error => {
-                    console.error('Error fetching or processing CSV:', error);
-                    statusMessage.innerHTML = `<span class="error">Failed to load graph: ${error.message}</span>`;
-                    graphContainer.style.display = 'none';
-                });
-        }
-    </script>
-</body>
-</html>
+                    });
+            }
+        </script>
+    </body>
+    </html>
+    ```
